@@ -5,6 +5,7 @@ BASE_URL = f"https://api.moonshot.cc/token/v1/solana/{Config.TOKEN_ADDRESS}"
 
 def get_token_data():
     response = requests.get(BASE_URL)
+    response.raise_for_status()
     return response.json()
 
 def get_token_name():

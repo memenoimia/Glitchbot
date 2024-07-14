@@ -30,11 +30,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Define the command handler for /start
 def start(update: Update, context: CallbackContext) -> None:
     update.message.reply_text("Welcome to Glitchbot! Use /help to see available commands.")
 
-# Define the command handler for /help
 def help_command(update: Update, context: CallbackContext) -> None:
     help_text = (
         "/start - Digital howdy! Beep boop!\n"
@@ -52,7 +50,6 @@ def help_command(update: Update, context: CallbackContext) -> None:
     )
     update.message.reply_text(help_text)
 
-# Define the command handler for /headroom
 def headroom(update: Update, context: CallbackContext) -> None:
     try:
         token_data = get_token_data()
@@ -73,13 +70,10 @@ def headroom(update: Update, context: CallbackContext) -> None:
         banner_url = get_token_banner()
         token_url = get_token_url()
 
-        # Get the first URL from the links
         website_url = token_data.get('profile', {}).get('links', [''])[0]
 
-        # Send the banner image
         context.bot.send_photo(chat_id=update.effective_chat.id, photo=banner_url)
 
-        # Prepare the message
         message = (
             f"🌐 Token: {token_name} ({token_symbol})\n"
             f"{Config.TOKEN_ADDRESS}\n"
@@ -90,14 +84,12 @@ def headroom(update: Update, context: CallbackContext) -> None:
             f"🌙 <a href='{token_url}'>Moonshot</a> 🌐 <a href='{website_url}'>Website</a>"
         )
 
-        # Send the message with the token information
         update.message.reply_text(message, parse_mode=ParseMode.HTML)
         logger.info("Displayed HEADROOM token information.")
     except Exception as e:
         logger.error(f"Error in headroom command: {e}")
         update.message.reply_text("An error occurred while fetching headroom information.")
 
-# Define the command handler for /news
 def news(update: Update, context: CallbackContext) -> None:
     try:
         news_items = get_latest_news()
@@ -114,7 +106,6 @@ def news(update: Update, context: CallbackContext) -> None:
         logger.error(f"Error in news command: {e}")
         update.message.reply_text("An error occurred while fetching the latest news.")
 
-# Define the command handler for /price
 def price(update: Update, context: CallbackContext) -> None:
     try:
         current_price = get_current_price()
@@ -124,11 +115,9 @@ def price(update: Update, context: CallbackContext) -> None:
         logger.error(f"Error in price command: {e}")
         update.message.reply_text("An error occurred while fetching the current price.")
 
-# Define the command handler for /subscribe
 def subscribe(update: Update, context: CallbackContext) -> None:
     update.message.reply_text("Subscription feature coming soon!")
 
-# Define the command handler for /transactions
 def transactions(update: Update, context: CallbackContext) -> None:
     try:
         latest_trades = get_latest_trades_for_token()
@@ -136,38 +125,30 @@ def transactions(update: Update, context: CallbackContext) -> None:
             update.message.reply_text("No recent transactions found.")
             return
 
-        latest_buy = next((trade for trade in latest_trades if trade.get('type') == 'buy'), None)
-        if latest_buy:
-            volume_usd = latest_buy.get('volumeUsd', 'N/A')
-            amount0 = latest_buy.get('amount0', 'N/A')
-            total_txns = len(latest_trades)
-            wallet = latest_buy.get('wallet', 'N/A')
-            progress = latest_buy.get('progress', 'N/A')
-            solscan_url = f"https://solscan.io/tx/{latest_buy.get('txHash', '')}"
+        latest_trade = latest_trades[0]  # Get the first trade
 
-            message = (
-                f"$Headroom Buy!\n\n"
-                f"👾👾👾👾👾👾\n\n"
-                f"💵 Spent: ${volume_usd}\n"
-                f"👾 Purchased: {amount0} MAX\n"
-                f"🛣 Total Txns: {total_txns}\n"
-                f"👤 Wallet: {wallet}\n"
-                f"🌙 Moonshot Progress: {progress}%\n"
-                f"🌤 <a href='{solscan_url}'>Solscan</a>\n"
-                f"🌐 <a href='{website_url}'>Website</a>"
-            )
+        volume_usd = latest_trade.get('volumeUsd', 'N/A')
+        amount = latest_trade.get('amount', 'N/A')
+        transaction_type = latest_trade.get('type', 'N/A')
+        wallet = latest_trade.get('wallet', 'N/A')
+        timestamp = latest_trade.get('timestamp', 'N/A')
+        transaction_id = latest_trade.get('id', 'N/A')
 
-            # Send the message with the latest trade information
-            update.message.reply_text(message, parse_mode=ParseMode.HTML)
-            logger.info("Displayed latest trade information.")
-        else:
-            update.message.reply_text("No recent buy transactions found.")
-            logger.info("No recent buy transactions found.")
+        message = (
+            f"Latest Transaction:\n"
+            f"💵 Volume: ${volume_usd}\n"
+            f"👾 Amount: {amount} MAX\n"
+            f"🔄 Type: {transaction_type}\n"
+            f"👤 Wallet: {wallet}\n"
+            f"🕒 Timestamp: {timestamp}\n"
+            f"🔗 Transaction ID: {transaction_id}\n"
+        )
+
+        update.message.reply_text(message)
     except Exception as e:
         logger.error(f"Error in transactions command: {e}")
         update.message.reply_text("An error occurred while fetching transactions information.")
 
-# Define the command handler for /marketcap
 def marketcap(update: Update, context: CallbackContext) -> None:
     try:
         market_cap = get_market_cap()
@@ -177,7 +158,6 @@ def marketcap(update: Update, context: CallbackContext) -> None:
         logger.error(f"Error in marketcap command: {e}")
         update.message.reply_text("An error occurred while fetching the market cap.")
 
-# Define the command handler for /volume24h
 def volume24h(update: Update, context: CallbackContext) -> None:
     try:
         volume_24h = get_24h_volume()
@@ -187,7 +167,6 @@ def volume24h(update: Update, context: CallbackContext) -> None:
         logger.error(f"Error in volume24h command: {e}")
         update.message.reply_text("An error occurred while fetching the 24h volume.")
 
-# Define the command handler for /change24h
 def change24h(update: Update, context: CallbackContext) -> None:
     try:
         change_24h = get_24h_change()
@@ -197,15 +176,12 @@ def change24h(update: Update, context: CallbackContext) -> None:
         logger.error(f"Error in change24h command: {e}")
         update.message.reply_text("An error occurred while fetching the 24h change.")
 
-# Define the command handler for /whales
 def whales(update: Update, context: CallbackContext) -> None:
     update.message.reply_text("Feature coming soon!")
 
-# Define the command handler for /chart
 def chart(update: Update, context: CallbackContext) -> None:
     update.message.reply_text("Feature coming soon!")
 
-# Main function to start the bot
 def main() -> None:
     updater = Updater(Config.TELEGRAM_TOKEN, use_context=True)
 
