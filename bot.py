@@ -1,175 +1,217 @@
 import logging
-from telegram import Update, Bot
+from telegram import Update, ParseMode
 from telegram.ext import Updater, CommandHandler, CallbackContext
-from transactions import get_recent_transactions, get_sol_price
+from metrics import (
+    get_token_name,
+    get_token_symbol,
+    get_market_cap,
+    get_24h_volume,
+    get_6h_volume,
+    get_1h_volume,
+    get_5m_volume,
+    get_24h_change,
+    get_6h_change,
+    get_1h_change,
+    get_5m_change,
+    get_total_supply,
+    get_liquidity,
+    get_token_data,
+    get_token_banner,
+    get_token_url,
+    get_current_price,
+    get_latest_trades_for_token
+)
+from config import Config
 from news import get_latest_news
-from metrics import get_market_cap, get_change_24h
-from config import TELEGRAM_TOKEN, HEADROOM_IMAGE_URL, TOKEN_ADDRESS
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
+# Enable logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
+)
 logger = logging.getLogger(__name__)
 
+# Define the command handler for /start
 def start(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text('Hi! Use /help to see available commands.')
-    logger.info("Started bot interaction.")
+    update.message.reply_text("Welcome to Glitchbot! Use /help to see available commands.")
 
+# Define the command handler for /help
 def help_command(update: Update, context: CallbackContext) -> None:
-    help_message = """
-Available Commands:
-/headroom - Get the scoop on the HEADROOM token. It's a doozy!
-/news - Latest buzz about Solana. Hot off the press!
-/price - Current SOL price. Cha-ching!
-/subscribe - Get price alerts. Stay in the loop!
-/transactions - Latest moves glitch. Who's doing what?
-/marketcap - Current market capitalization of your token. Big numbers!
-/volume24h - 24-hour trading volume. How much action?
-/change24h - 24-hour price change. Up or down?
-/help - Need help? I'm here to assist!
-    """
-    update.message.reply_text(help_message)
-    logger.info("Displayed help message.")
+    help_text = (
+        "/start - Digital howdy! Beep boop!\n"
+        "/headroom - HEADROOM token info. Get the skinny!\n"
+        "/news - Latest Solana buzz. Extra, extra!\n"
+        "/price - Current SOL price. Cha-ching!\n"
+        "/subscribe - Future subscription awesomeness. Stay tuned!\n"
+        "/transactions - Latest transactions. Splash!\n"
+        "/marketcap - Market cap means big bucks?\n"
+        "/volume24h - 24-hour volume. Big leagues!\n"
+        "/change24h - 24-hour price change. Rollercoaster!\n"
+        "/help - List of commands. Help is here!\n"
+        "/whales - Large transactions. Whale watching!\n"
+        "/chart [token_symbol] - Token price chart. Highs, lows, drama!\n"
+    )
+    update.message.reply_text(help_text)
 
+# Define the command handler for /headroom
 def headroom(update: Update, context: CallbackContext) -> None:
     try:
-        transactions = get_recent_transactions()
-        if not transactions:
-            update.message.reply_text("No recent transactions found.")
-            logger.info("No recent transactions found.")
-            return
+        token_data = get_token_data()
+        token_name = get_token_name()
+        token_symbol = get_token_symbol()
+        market_cap = float(get_market_cap())
+        volume_24h = float(get_24h_volume())
+        volume_6h = float(get_6h_volume())
+        volume_1h = float(get_1h_volume())
+        volume_5m = float(get_5m_volume())
+        change_24h = float(get_24h_change())
+        change_6h = float(get_6h_change())
+        change_1h = float(get_1h_change())
+        change_5m = float(get_5m_change())
+        total_supply = get_total_supply()
+        liquidity = float(get_liquidity())
+        current_price = float(get_current_price())
+        banner_url = get_token_banner()
+        token_url = get_token_url()
 
-        latest_transaction = transactions[0]
-        amount_token = latest_transaction.get('amountToken', 'N/A')
-        usd_amount = latest_transaction.get('usdAmount', 'N/A')
-        sol_amount = latest_transaction.get('solAmount', 'N/A')
-        truncated_wallet = f"{latest_transaction['signer'][:6]}...{latest_transaction['signer'][-6:]}"
+        # Get the first URL from the links
+        website_url = token_data.get('profile', {}).get('links', [''])[0]
 
-        market_cap = get_market_cap()
-        change_24h = get_change_24h()
+        # Send the banner image
+        context.bot.send_photo(chat_id=update.effective_chat.id, photo=banner_url)
 
-        headroom_message = f"""
-🗣 HEADROOM:
+        # Prepare the message
+        message = (
+            f"🌐 Token: {token_name} ({token_symbol})\n"
+            f"{Config.TOKEN_ADDRESS}\n"
+            f"💸 Market Cap: ${market_cap:,.0f}\n"
+            f"🔄 Volume 24h: ${volume_24h:,.0f} 6h: ${volume_6h:,.0f} 1h: ${volume_1h:,.0f} 5m: ${volume_5m:,.0f}\n"
+            f"📈 Change 24h: {change_24h:.2f}% 6h: {change_6h:.2f}% 1h: {change_1h:.2f}% 5m: {change_5m:.2f}%\n"
+            f"🏦 Total Supply: {total_supply} 💧 Liquidity: ${liquidity:,.0f}\n"
+            f"🌙 <a href='{token_url}'>Moonshot</a> 🌐 <a href='{website_url}'>Website</a>"
+        )
 
-💵 Spent: ${usd_amount:.2f} ({sol_amount:.4f} SOL)
-🪙 Position: {change_24h:.2f}%
-💸 Market Cap: ${market_cap:.2f}
-👤 Wallet: [{truncated_wallet}](https://solanabeach.io/address/{latest_transaction['signer']})
-💰 $HEADROOM Purchased: {amount_token}
-🌙 [Moonshot](https://dexscreener.com/solana/{TOKEN_ADDRESS})
-🌐 [Website](https://memenoimia.fun)
-        """
-        update.message.reply_text(headroom_message, parse_mode="Markdown")
+        # Send the message with the token information
+        update.message.reply_text(message, parse_mode=ParseMode.HTML)
         logger.info("Displayed HEADROOM token information.")
     except Exception as e:
-        logger.exception("Error in headroom command")
+        logger.error(f"Error in headroom command: {e}")
+        update.message.reply_text("An error occurred while fetching headroom information.")
 
+# Define the command handler for /news
 def news(update: Update, context: CallbackContext) -> None:
     try:
-        latest_news = get_latest_news()
-        if not latest_news:
-            update.message.reply_text("No news found.")
-            logger.info("No news found.")
+        news_items = get_latest_news()
+
+        if not news_items:
+            update.message.reply_text("No news available at the moment.")
             return
 
-        news_message = "\n\n".join([f"{news_item['title']}\n{news_item['url']}" for news_item in latest_news])
-        update.message.reply_text(news_message)
-        logger.info("Displayed latest news.")
+        news_message = "\n\n".join(
+            [f"📰 <a href='{item['url']}'>{item['title']}</a>\n{item['description']}" for item in news_items[:3]]
+        )
+        update.message.reply_text(news_message, parse_mode=ParseMode.HTML)
     except Exception as e:
-        logger.exception("Error in news command")
+        logger.error(f"Error in news command: {e}")
+        update.message.reply_text("An error occurred while fetching the latest news.")
 
+# Define the command handler for /price
 def price(update: Update, context: CallbackContext) -> None:
     try:
-        sol_price = get_sol_price()
-        price_message = f"Current SOL price: ${sol_price:.2f}"
-        update.message.reply_text(price_message)
-        logger.info("Displayed current SOL price.")
+        current_price = get_current_price()
+        message = f"💲 Current Price: ${current_price:.4f}"
+        update.message.reply_text(message)
     except Exception as e:
-        logger.exception("Error in price command")
+        logger.error(f"Error in price command: {e}")
+        update.message.reply_text("An error occurred while fetching the current price.")
 
+# Define the command handler for /subscribe
 def subscribe(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text("Subscription feature is not implemented yet.")
-    logger.info("Subscription feature is not implemented yet.")
+    update.message.reply_text("Subscription feature coming soon!")
 
+# Define the command handler for /transactions
 def transactions(update: Update, context: CallbackContext) -> None:
     try:
-        transactions = get_recent_transactions()
-        if not transactions:
+        latest_trades = get_latest_trades_for_token()
+        if not latest_trades:
             update.message.reply_text("No recent transactions found.")
-            logger.info("No recent transactions found.")
             return
 
-        transactions_message = "\n\n".join([f"Transaction: {tx['id']}, Amount: {tx['amount']}" for tx in transactions])
-        update.message.reply_text(transactions_message)
-        logger.info("Displayed recent transactions.")
-    except Exception as e:
-        logger.exception("Error in transactions command")
+        latest_buy = next((trade for trade in latest_trades if trade.get('type') == 'buy'), None)
+        if latest_buy:
+            volume_usd = latest_buy.get('volumeUsd', 'N/A')
+            amount0 = latest_buy.get('amount0', 'N/A')
+            total_txns = len(latest_trades)
+            wallet = latest_buy.get('wallet', 'N/A')
+            progress = latest_buy.get('progress', 'N/A')
+            solscan_url = f"https://solscan.io/tx/{latest_buy.get('txHash', '')}"
 
+            message = (
+                f"$Headroom Buy!\n\n"
+                f"👾👾👾👾👾👾\n\n"
+                f"💵 Spent: ${volume_usd}\n"
+                f"👾 Purchased: {amount0} MAX\n"
+                f"🛣 Total Txns: {total_txns}\n"
+                f"👤 Wallet: {wallet}\n"
+                f"🌙 Moonshot Progress: {progress}%\n"
+                f"🌤 <a href='{solscan_url}'>Solscan</a>\n"
+                f"🌐 <a href='{website_url}'>Website</a>"
+            )
+
+            # Send the message with the latest trade information
+            update.message.reply_text(message, parse_mode=ParseMode.HTML)
+            logger.info("Displayed latest trade information.")
+        else:
+            update.message.reply_text("No recent buy transactions found.")
+            logger.info("No recent buy transactions found.")
+    except Exception as e:
+        logger.error(f"Error in transactions command: {e}")
+        update.message.reply_text("An error occurred while fetching transactions information.")
+
+# Define the command handler for /marketcap
 def marketcap(update: Update, context: CallbackContext) -> None:
     try:
         market_cap = get_market_cap()
-        marketcap_message = f"Current market capitalization: ${market_cap:.2f}"
-        update.message.reply_text(marketcap_message)
-        logger.info("Displayed market capitalization.")
+        message = f"💸 Market Cap: ${market_cap:,.0f}"
+        update.message.reply_text(message)
     except Exception as e:
-        logger.exception("Error in marketcap command")
+        logger.error(f"Error in marketcap command: {e}")
+        update.message.reply_text("An error occurred while fetching the market cap.")
 
+# Define the command handler for /volume24h
 def volume24h(update: Update, context: CallbackContext) -> None:
     try:
-        volume_24h = get_volume_24h()
-        volume_message = f"24-hour trading volume: ${volume_24h:.2f}"
-        update.message.reply_text(volume_message)
-        logger.info("Displayed 24-hour trading volume.")
+        volume_24h = get_24h_volume()
+        message = f"🔄 Volume 24h: ${volume_24h:,.0f}"
+        update.message.reply_text(message)
     except Exception as e:
-        logger.exception("Error in volume24h command")
+        logger.error(f"Error in volume24h command: {e}")
+        update.message.reply_text("An error occurred while fetching the 24h volume.")
 
+# Define the command handler for /change24h
 def change24h(update: Update, context: CallbackContext) -> None:
     try:
-        change_24h = get_change_24h()
-        change_message = f"24-hour price change: {change_24h:.2f}%"
-        update.message.reply_text(change_message)
-        logger.info("Displayed 24-hour price change.")
+        change_24h = get_24h_change()
+        message = f"📈 Change 24h: {change_24h:.2f}%"
+        update.message.reply_text(message)
     except Exception as e:
-        logger.exception("Error in change24h command")
+        logger.error(f"Error in change24h command: {e}")
+        update.message.reply_text("An error occurred while fetching the 24h change.")
 
-def process_update(update_dict, dispatcher):
-    logger.info(f"Update received: {update_dict}")
-    try:
-        bot = Bot(token=TELEGRAM_TOKEN)
-        update = Update.de_json(update_dict, bot)
-        context = CallbackContext(dispatcher)
+# Define the command handler for /whales
+def whales(update: Update, context: CallbackContext) -> None:
+    update.message.reply_text("Feature coming soon!")
 
-        if update.message:
-            text = update.message.text
-            if text == "/start":
-                start(update, context)
-            elif text == "/help":
-                help_command(update, context)
-            elif text == "/headroom":
-                headroom(update, context)
-            elif text == "/news":
-                news(update, context)
-            elif text == "/price":
-                price(update, context)
-            elif text == "/subscribe":
-                subscribe(update, context)
-            elif text == "/transactions":
-                transactions(update, context)
-            elif text == "/marketcap":
-                marketcap(update, context)
-            elif text == "/volume24h":
-                volume24h(update, context)
-            elif text == "/change24h":
-                change24h(update, context)
-    except Exception as e:
-        logger.exception("Error handling the update")
+# Define the command handler for /chart
+def chart(update: Update, context: CallbackContext) -> None:
+    update.message.reply_text("Feature coming soon!")
 
-def main() -> Updater:
-    logger.info(f"Using TELEGRAM_TOKEN: {TELEGRAM_TOKEN}")
+# Main function to start the bot
+def main() -> None:
+    updater = Updater(Config.TELEGRAM_TOKEN, use_context=True)
 
-    updater = Updater(TELEGRAM_TOKEN)
     dispatcher = updater.dispatcher
 
     dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(CommandHandler("help", help_command))
     dispatcher.add_handler(CommandHandler("headroom", headroom))
     dispatcher.add_handler(CommandHandler("news", news))
     dispatcher.add_handler(CommandHandler("price", price))
@@ -178,12 +220,13 @@ def main() -> Updater:
     dispatcher.add_handler(CommandHandler("marketcap", marketcap))
     dispatcher.add_handler(CommandHandler("volume24h", volume24h))
     dispatcher.add_handler(CommandHandler("change24h", change24h))
+    dispatcher.add_handler(CommandHandler("help", help_command))
+    dispatcher.add_handler(CommandHandler("whales", whales))
+    dispatcher.add_handler(CommandHandler("chart", chart))
 
     updater.start_polling()
-    logger.info("Bot started.")
+
     updater.idle()
 
-    return updater
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

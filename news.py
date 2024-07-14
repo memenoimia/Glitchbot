@@ -1,30 +1,29 @@
 import requests
 import logging
-from config import NEWS_TOKEN
+from config import Config
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 def get_latest_news():
     try:
-        url = f"https://newsapi.org/v2/everything?q=solana&apiKey={NEWS_TOKEN}"
-        logger.debug(f"Fetching news with URL: {url}")
+        # Using the /everything endpoint to fetch news related to Solana
+        url = f"https://newsapi.org/v2/everything?q=memecoin&apiKey={Config.NEWS_API_KEY}&pageSize=3"
+        logger.debug(f"Fetching news from URL: {url}")
         response = requests.get(url)
-        logger.debug(f"Response status code: {response.status_code}")
-        if response.status_code != 200:
-            logger.error("Error fetching news.")
-            return []
-
+        response.raise_for_status()
         news_data = response.json()
+        logger.debug(f"Received news data: {news_data}")
         articles = news_data.get('articles', [])
-        news_items = []
-        for article in articles[:5]:
-            news_item = {
+        if not articles:
+            logger.debug("No articles found in news data.")
+        news_items = [
+            {
                 'title': article['title'],
                 'description': article['description'],
                 'url': article['url']
-            }
-            news_items.append(news_item)
+            } for article in articles
+        ]
         return news_items
     except Exception as e:
         logger.error(f"Error fetching latest news: {e}")

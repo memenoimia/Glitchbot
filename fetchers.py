@@ -1,65 +1,101 @@
 import requests
-import logging
-from config import TOKEN_ADDRESS, SOLANABEACH_API
+from config import Config
 
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.DEBUG
-)
-logger = logging.getLogger(__name__)
+# Fetch token data from Moonshot API
+def get_token_data():
+    url = f"{Config.MOONSHOT_API_BASE}/token/v1/{Config.CHAIN_ID}/{Config.TOKEN_ADDRESS}"
+    response = requests.get(url)
+    response.raise_for_status()
+    return response.json()
 
-def get_sol_price():
-    try:
-        response = requests.get('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd')
-        response.raise_for_status()
-        price_data = response.json()
-        sol_price = price_data['solana']['usd']
-        return sol_price
-    except Exception as e:
-        logger.error(f"Error fetching SOL price: {e}")
-        return None
+# Fetch latest trades for a specified token
+def get_latest_trades_for_token():
+    url = f"{Config.MOONSHOT_API_BASE}/trades/v1/latest/{Config.CHAIN_ID}/{Config.TOKEN_ADDRESS}"
+    response = requests.get(url)
+    response.raise_for_status()
+    return response.json().get('data', [])
 
-def get_recent_transactions():
-    try:
-        url = f"https://api.solanabeach.io/v1/account/{TOKEN_ADDRESS}/transactions?limit=1"
-        headers = {
-            'Authorization': f'Bearer {SOLANABEACH_API}',
-            'Content-Type': 'application/json'
-        }
-        logger.debug(f"Fetching transactions with URL: {url}")
-        response = requests.get(url, headers=headers)
-        logger.debug(f"Response status code: {response.status_code}")
-        response.raise_for_status()
-        
-        transactions = response.json()
-        logger.info(f"Transactions fetched: {transactions}")
+# Fetch current price from token data
+def get_current_price():
+    token_data = get_token_data()
+    return token_data.get('priceUsd', 0.0)
 
-        sol_price = get_sol_price()
-        if sol_price is None:
-            logger.error("Could not fetch SOL price.")
-            return []
+# Fetch token name from token data
+def get_token_name():
+    token_data = get_token_data()
+    return token_data.get('baseToken', {}).get('name', 'N/A')
 
-        formatted_transactions = []
-        for tx in transactions:
-            try:
-                if 'postTokenBalances' in tx['meta'] and tx['meta']['postTokenBalances']:
-                    balance = tx['meta']['postTokenBalances'][0]
-                    amount_token = balance['uiTokenAmount']['uiAmount']
-                    amount_token_in_sol = float(amount_token) / 10**9  # Assuming token amount is in lamports
-                    usd_amount = amount_token_in_sol * sol_price
-                    signer = balance['owner']['address']
-                    transaction = {
-                        'amountToken': amount_token,
-                        'usdAmount': usd_amount,
-                        'signer': signer
-                    }
-                    formatted_transactions.append(transaction)
-                else:
-                    logger.warning(f"No postTokenBalances in transaction: {tx}")
-            except KeyError as e:
-                logger.error(f"KeyError: {e} in transaction {tx}")
-        
-        return formatted_transactions
-    except Exception as e:
-        logger.error(f"Error fetching recent transactions: {e}")
-        return []
+# Fetch token symbol from token data
+def get_token_symbol():
+    token_data = get_token_data()
+    return token_data.get('baseToken', {}).get('symbol', 'N/A')
+
+# Fetch market cap from token data
+def get_market_cap():
+    token_data = get_token_data()
+    return token_data.get('marketCap', 0.0)
+
+# Fetch 24-hour volume from token data
+def get_24h_volume():
+    token_data = get_token_data()
+    return token_data.get('volume', {}).get('h24', {}).get('total', 0.0)
+
+# Fetch 6-hour volume from token data
+def get_6h_volume():
+    token_data = get_token_data()
+    return token_data.get('volume', {}).get('h6', {}).get('total', 0.0)
+
+# Fetch 1-hour volume from token data
+def get_1h_volume():
+    token_data = get_token_data()
+    return token_data.get('volume', {}).get('h1', {}).get('total', 0.0)
+
+# Fetch 5-minute volume from token data
+def get_5m_volume():
+    token_data = get_token_data()
+    return token_data.get('volume', {}).get('m5', {}).get('total', 0.0)
+
+# Fetch 24-hour price change from token data
+def get_24h_change():
+    token_data = get_token_data()
+    return token_data.get('priceChange', {}).get('h24', 0.0)
+
+# Fetch 6-hour price change from token data
+def get_6h_change():
+    token_data = get_token_data()
+    return token_data.get('priceChange', {}).get('h6', 0.0)
+
+# Fetch 1-hour price change from token data
+def get_1h_change():
+    token_data = get_token_data()
+    return token_data.get('priceChange', {}).get('h1', 0.0)
+
+# Fetch 5-minute price change from token data
+def get_5m_change():
+    token_data = get_token_data()
+    return token_data.get('priceChange', {}).get('m5', 0.0)
+
+# Fetch total supply from token data
+def get_total_supply():
+    token_data = get_token_data()
+    return token_data.get('totalSupply', 'N/A')
+
+# Fetch liquidity from token data
+def get_liquidity():
+    token_data = get_token_data()
+    return token_data.get('liquidity', {}).get('h24', {}).get('total', 0.0)
+
+# Get token creator address
+def get_token_creator():
+    token_data = get_token_data()
+    return token_data.get('moonshot', {}).get('creator', '')
+
+# Get token banner URL
+def get_token_banner():
+    token_data = get_token_data()
+    return token_data.get('profile', {}).get('banner', '')
+
+# Get token URL
+def get_token_url():
+    token_data = get_token_data()
+    return token_data.get('url', '')
