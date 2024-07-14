@@ -1,5 +1,5 @@
 import logging
-from telegram import Update, ParseMode
+from telegram import Update, ParseMode, Bot
 from telegram.ext import Updater, CommandHandler, CallbackContext
 from metrics import (
     get_token_name,
@@ -24,14 +24,24 @@ from metrics import (
 from config import Config
 from news import get_latest_news
 
+bot = Bot(token=Config.TELEGRAM_TOKEN)
+
 # Enable logging
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG
 )
 logger = logging.getLogger(__name__)
 
+def send_message_to_group(message):
+    try:
+        bot.send_message(chat_id=Config.TELEGRAM_CHAT_ID, text=message)
+        logger.info(f"Sent message to group: {message}")
+    except Exception as e:
+        logger.error(f"Error sending message to group: {e}")
+
 def start(update: Update, context: CallbackContext) -> None:
     update.message.reply_text("Welcome to Glitchbot! Use /help to see available commands.")
+    send_message_to_group("Bot has started and is ready to receive commands.")
 
 def help_command(update: Update, context: CallbackContext) -> None:
     help_text = (
@@ -75,13 +85,13 @@ def headroom(update: Update, context: CallbackContext) -> None:
         context.bot.send_photo(chat_id=update.effective_chat.id, photo=banner_url)
 
         message = (
-            f"🌐 Token: {token_name} ({token_symbol})\n"
+            f"\uD83C\uDF10 Token: {token_name} ({token_symbol})\n"
             f"{Config.TOKEN_ADDRESS}\n"
-            f"💸 Market Cap: ${market_cap:,.0f}\n"
-            f"🔄 Volume 24h: ${volume_24h:,.0f} 6h: ${volume_6h:,.0f} 1h: ${volume_1h:,.0f} 5m: ${volume_5m:,.0f}\n"
-            f"📈 Change 24h: {change_24h:.2f}% 6h: {change_6h:.2f}% 1h: {change_1h:.2f}% 5m: {change_5m:.2f}%\n"
-            f"🏦 Total Supply: {total_supply} 💧 Liquidity: ${liquidity:,.0f}\n"
-            f"🌙 <a href='{token_url}'>Moonshot</a> 🌐 <a href='{website_url}'>Website</a>"
+            f"\uD83D\uDCB8 Market Cap: ${market_cap:,.0f}\n"
+            f"\uD83D\uDD04 Volume 24h: ${volume_24h:,.0f} 6h: ${volume_6h:,.0f} 1h: ${volume_1h:,.0f} 5m: ${volume_5m:,.0f}\n"
+            f"\uD83D\uDCC8 Change 24h: {change_24h:.2f}% 6h: {change_6h:.2f}% 1h: {change_1h:.2f}% 5m: {change_5m:.2f}%\n"
+            f"\uD83C\uDFE6 Total Supply: {total_supply} \uD83D\uDCA7 Liquidity: ${liquidity:,.0f}\n"
+            f"\uD83C\uDF19 <a href='{token_url}'>Moonshot</a> \uD83C\uDF10 <a href='{website_url}'>Website</a>"
         )
 
         update.message.reply_text(message, parse_mode=ParseMode.HTML)
@@ -99,7 +109,7 @@ def news(update: Update, context: CallbackContext) -> None:
             return
 
         news_message = "\n\n".join(
-            [f"📰 <a href='{item['url']}'>{item['title']}</a>\n{item['description']}" for item in news_items[:3]]
+            [f"\uD83D\uDCF0 <a href='{item['url']}'>{item['title']}</a>\n{item['description']}" for item in news_items[:3]]
         )
         update.message.reply_text(news_message, parse_mode=ParseMode.HTML)
     except Exception as e:
@@ -109,7 +119,7 @@ def news(update: Update, context: CallbackContext) -> None:
 def price(update: Update, context: CallbackContext) -> None:
     try:
         current_price = get_current_price()
-        message = f"💲 Current Price: ${current_price:.4f}"
+        message = f"\uD83D\uDCB2 Current Price: ${current_price:.4f}"
         update.message.reply_text(message)
     except Exception as e:
         logger.error(f"Error in price command: {e}")
@@ -140,16 +150,16 @@ def transactions(update: Update, context: CallbackContext) -> None:
 
         message = (
             f"Latest Transaction:\n"
-            f"🕒 Block Number: {block_number}\n"
-            f"📅 Timestamp: {block_timestamp}\n"
-            f"🔄 Pair ID: {pair_id}\n"
-            f"💵 Amount0: {amount0}\n"
-            f"💵 Amount1: {amount1}\n"
-            f"💲 Price (USD): {price_usd}\n"
-            f"📈 Volume (USD): {volume_usd}\n"
-            f"🔄 Type: {txn_type}\n"
-            f"👤 Maker: {maker}\n"
-            f"🔗 Transaction ID: {txn_id}\n"
+            f"\uD83D\uDD52 Block Number: {block_number}\n"
+            f"\uD83D\uDCC5 Timestamp: {block_timestamp}\n"
+            f"\uD83D\uDD04 Pair ID: {pair_id}\n"
+            f"\uD83D\uDCB5 Amount0: {amount0}\n"
+            f"\uD83D\uDCB5 Amount1: {amount1}\n"
+            f"\uD83D\uDCB2 Price (USD): {price_usd}\n"
+            f"\uD83D\uDCC8 Volume (USD): {volume_usd}\n"
+            f"\uD83D\uDD04 Type: {txn_type}\n"
+            f"\uD83D\uDC64 Maker: {maker}\n"
+            f"\uD83D\uDD17 Transaction ID: {txn_id}\n"
         )
 
         update.message.reply_text(message)
@@ -160,7 +170,7 @@ def transactions(update: Update, context: CallbackContext) -> None:
 def marketcap(update: Update, context: CallbackContext) -> None:
     try:
         market_cap = get_market_cap()
-        message = f"💸 Market Cap: ${market_cap:,.0f}"
+        message = f"\uD83D\uDCB8 Market Cap: ${market_cap:,.0f}"
         update.message.reply_text(message)
     except Exception as e:
         logger.error(f"Error in marketcap command: {e}")
@@ -169,7 +179,7 @@ def marketcap(update: Update, context: CallbackContext) -> None:
 def volume24h(update: Update, context: CallbackContext) -> None:
     try:
         volume_24h = get_24h_volume()
-        message = f"🔄 Volume 24h: ${volume_24h:,.0f}"
+        message = f"\uD83D\uDD04 Volume 24h: ${volume_24h:,.0f}"
         update.message.reply_text(message)
     except Exception as e:
         logger.error(f"Error in volume24h command: {e}")
@@ -178,7 +188,7 @@ def volume24h(update: Update, context: CallbackContext) -> None:
 def change24h(update: Update, context: CallbackContext) -> None:
     try:
         change_24h = get_24h_change()
-        message = f"📈 Change 24h: {change_24h:.2f}%"
+        message = f"\uD83D\uDCC8 Change 24h: {change_24h:.2f}%"
         update.message.reply_text(message)
     except Exception as e:
         logger.error(f"Error in change24h command: {e}")
