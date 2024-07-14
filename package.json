@@ -1,0 +1,19 @@
+{
+    "name": "glitchbot",
+    "version": "1.0.0",
+    "description": "A Telegram bot for providing real-time updates about the $HEADROOM token.",
+    "main": "app.py",
+    "scripts": {
+      "start": "python3 app.py"
+    },
+    "dependencies": {
+      "google-generativeai": "^0.1.0"
+    },
+    "engines": {
+      "node": "14.x"
+    },
+    "devDependencies": {},
+    "author": "Max Headroom",
+    "license": "MIT"
+  }
+  
