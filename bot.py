@@ -1,5 +1,6 @@
 import json
 import logging
+from news import get_latest_news
 from telegram import Update, ParseMode, Bot
 from telegram.ext import Updater, CommandHandler, CallbackContext
 from metrics import (
