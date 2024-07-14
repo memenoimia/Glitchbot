@@ -1,3 +1,4 @@
+import json
 import logging
 from telegram import Update, ParseMode, Bot
 from telegram.ext import Updater, CommandHandler, CallbackContext
@@ -21,8 +22,7 @@ from metrics import (
     get_current_price,
     get_latest_trades_for_token
 )
-from config import Config
-from news import get_latest_news
+from config import Config  # Ensure this import is correct
 
 bot = Bot(token=Config.TELEGRAM_TOKEN)
 
@@ -135,34 +135,41 @@ def transactions(update: Update, context: CallbackContext) -> None:
             update.message.reply_text("No recent transactions found.")
             return
 
-        latest_trade = latest_trades[0]  # Get the first trade
+        # Ensure latest_trades is a list of dictionaries
+        if isinstance(latest_trades, list):
+            messages = []
+            for trade in latest_trades:
+                block_number = trade.get('blockNumber', 'N/A')
+                block_timestamp = trade.get('blockTimestamp', 'N/A')
+                pair_id = trade.get('pairId', 'N/A')
+                amount0 = trade.get('amount0', 'N/A')
+                amount1 = trade.get('amount1', 'N/A')
+                price_usd = trade.get('priceUsd', 'N/A')
+                volume_usd = trade.get('volumeUsd', 'N/A')
+                txn_type = trade.get('type', 'N/A')
+                maker = trade.get('maker', 'N/A')
+                txn_id = trade.get('txnId', 'N/A')
 
-        block_number = latest_trade.get('blockNumber', 'N/A')
-        block_timestamp = latest_trade.get('blockTimestamp', 'N/A')
-        pair_id = latest_trade.get('pairId', 'N/A')
-        amount0 = latest_trade.get('amount0', 'N/A')
-        amount1 = latest_trade.get('amount1', 'N/A')
-        price_usd = latest_trade.get('priceUsd', 'N/A')
-        volume_usd = latest_trade.get('volumeUsd', 'N/A')
-        txn_type = latest_trade.get('type', 'N/A')
-        maker = latest_trade.get('maker', 'N/A')
-        txn_id = latest_trade.get('txnId', 'N/A')
+                message = (
+                    f"Transaction:\n"
+                    f"🕒 Block Number: {block_number}\n"
+                    f"📅 Timestamp: {block_timestamp}\n"
+                    f"🔄 Pair ID: {pair_id}\n"
+                    f"💰 Amount0: {amount0}\n"
+                    f"💰 Amount1: {amount1}\n"
+                    f"💲 Price (USD): {price_usd}\n"
+                    f"📊 Volume (USD): {volume_usd}\n"
+                    f"🔄 Type: {txn_type}\n"
+                    f"👤 Maker: {maker}\n"
+                    f"🔗 Transaction ID: {txn_id}\n"
+                )
+                messages.append(message)
 
-        message = (
-            f"Latest Transaction:\n"
-            f"\uD83D\uDD52 Block Number: {block_number}\n"
-            f"\uD83D\uDCC5 Timestamp: {block_timestamp}\n"
-            f"\uD83D\uDD04 Pair ID: {pair_id}\n"
-            f"\uD83D\uDCB5 Amount0: {amount0}\n"
-            f"\uD83D\uDCB5 Amount1: {amount1}\n"
-            f"\uD83D\uDCB2 Price (USD): {price_usd}\n"
-            f"\uD83D\uDCC8 Volume (USD): {volume_usd}\n"
-            f"\uD83D\uDD04 Type: {txn_type}\n"
-            f"\uD83D\uDC64 Maker: {maker}\n"
-            f"\uD83D\uDD17 Transaction ID: {txn_id}\n"
-        )
-
-        update.message.reply_text(message)
+            for msg in messages:
+                update.message.reply_text(msg)
+        else:
+            logger.error("Error in transactions command: latest_trades is not a list.")
+            update.message.reply_text("An error occurred while fetching transactions information.")
     except Exception as e:
         logger.error(f"Error in transactions command: {e}")
         update.message.reply_text("An error occurred while fetching transactions information.")
@@ -198,7 +205,11 @@ def whales(update: Update, context: CallbackContext) -> None:
     update.message.reply_text("Feature coming soon!")
 
 def chart(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text("Feature coming soon!")
+    token_symbol = ' '.join(context.args).upper()
+    if not token_symbol:
+        update.message.reply_text("Please specify a token symbol. Usage: /chart [token_symbol]")
+        return
+    update.message.reply_text(f"Token price chart for {token_symbol}. Highs, lows, drama!")
 
 def main() -> None:
     updater = Updater(Config.TELEGRAM_TOKEN, use_context=True)
@@ -216,7 +227,7 @@ def main() -> None:
     dispatcher.add_handler(CommandHandler("change24h", change24h))
     dispatcher.add_handler(CommandHandler("help", help_command))
     dispatcher.add_handler(CommandHandler("whales", whales))
-    dispatcher.add_handler(CommandHandler("chart", chart))
+    dispatcher.add_handler(CommandHandler("chart", chart, pass_args=True))
 
     updater.start_polling()
     updater.idle()
