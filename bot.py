@@ -13,16 +13,16 @@ from metrics import (
     get_24h_change,
     get_6h_change,
     get_1h_change,
-    get_5m_change,
+    get_5m_change, 
     get_total_supply,
     get_liquidity,
     get_token_data,
     get_token_banner,
     get_token_url,
     get_current_price,
-    get_latest_trades_for_token
+    get_latest_trades_for_token,
 )
-from config import Config  # Ensure this import is correct
+from config import Config
 
 bot = Bot(token=Config.TELEGRAM_TOKEN)
 
@@ -130,46 +130,44 @@ def subscribe(update: Update, context: CallbackContext) -> None:
 
 def transactions(update: Update, context: CallbackContext) -> None:
     try:
-        latest_trades = get_latest_trades_for_token()
+        latest_trades_response = get_latest_trades_for_token()
+        
+        if isinstance(latest_trades_response, dict):
+            latest_trades = latest_trades_response.get('data', [])
+        else:
+            latest_trades = latest_trades_response
+
         if not latest_trades:
             update.message.reply_text("No recent transactions found.")
             return
 
-        # Ensure latest_trades is a list of dictionaries
-        if isinstance(latest_trades, list):
-            messages = []
-            for trade in latest_trades:
-                block_number = trade.get('blockNumber', 'N/A')
-                block_timestamp = trade.get('blockTimestamp', 'N/A')
-                pair_id = trade.get('pairId', 'N/A')
-                amount0 = trade.get('amount0', 'N/A')
-                amount1 = trade.get('amount1', 'N/A')
-                price_usd = trade.get('priceUsd', 'N/A')
-                volume_usd = trade.get('volumeUsd', 'N/A')
-                txn_type = trade.get('type', 'N/A')
-                maker = trade.get('maker', 'N/A')
-                txn_id = trade.get('txnId', 'N/A')
+        latest_trade = latest_trades[0]
+        block_number = latest_trade.get('blockNumber', 'N/A')
+        block_timestamp = latest_trade.get('blockTimestamp', 'N/A')
+        pair_id = latest_trade.get('pairId', 'N/A')
+        amount0 = latest_trade.get('amount0', 'N/A')
+        amount1 = latest_trade.get('amount1', 'N/A')
+        price_usd = latest_trade.get('priceUsd', 'N/A')
+        volume_usd = latest_trade.get('volumeUsd', 'N/A')
+        txn_type = latest_trade.get('type', 'N/A')
+        maker = latest_trade.get('maker', 'N/A')
+        txn_id = latest_trade.get('txnId', 'N/A')
 
-                message = (
-                    f"Transaction:\n"
-                    f"🕒 Block Number: {block_number}\n"
-                    f"📅 Timestamp: {block_timestamp}\n"
-                    f"🔄 Pair ID: {pair_id}\n"
-                    f"💰 Amount0: {amount0}\n"
-                    f"💰 Amount1: {amount1}\n"
-                    f"💲 Price (USD): {price_usd}\n"
-                    f"📊 Volume (USD): {volume_usd}\n"
-                    f"🔄 Type: {txn_type}\n"
-                    f"👤 Maker: {maker}\n"
-                    f"🔗 Transaction ID: {txn_id}\n"
-                )
-                messages.append(message)
+        message = (
+            f"Latest Transaction:\n"
+            f"🕒 Block Number: {block_number}\n"
+            f"📅 Timestamp: {block_timestamp}\n"
+            f"🔄 Pair ID: {pair_id}\n"
+            f"💰 Amount0: {amount0}\n"
+            f"💰 Amount1: {amount1}\n"
+            f"💲 Price (USD): {price_usd}\n"
+            f"📊 Volume (USD): {volume_usd}\n"
+            f"🔄 Type: {txn_type}\n"
+            f"👤 Maker: {maker}\n"
+            f"🔗 Transaction ID: {txn_id}\n"
+        )
 
-            for msg in messages:
-                update.message.reply_text(msg)
-        else:
-            logger.error("Error in transactions command: latest_trades is not a list.")
-            update.message.reply_text("An error occurred while fetching transactions information.")
+        update.message.reply_text(message)
     except Exception as e:
         logger.error(f"Error in transactions command: {e}")
         update.message.reply_text("An error occurred while fetching transactions information.")

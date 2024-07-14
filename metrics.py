@@ -64,7 +64,7 @@ def get_latest_trades_for_token():
     url = f"https://api.moonshot.cc/trades/v1/latest/{Config.CHAIN_ID}/{Config.TOKEN_ADDRESS}"
     response = requests.get(url)
     response.raise_for_status()
-    return response.json().get('data', [])
+    return response.json()
 
 def get_token_banner():
     data = get_token_data()
