@@ -13,3 +13,4 @@ class Config:
     TOKEN_CREATOR_ADDRESS = os.getenv('TOKEN_CREATOR_ADDRESS')
     BOND_CURVE_ADDRESS = os.getenv('BOND_CURVE_ADDRESS')
     TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+    BASE_URL = os.getenv('BASE_URL') 
