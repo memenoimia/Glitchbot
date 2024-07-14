@@ -137,7 +137,7 @@ def transactions(update: Update, context: CallbackContext) -> None:
         message = (
             f"Latest Transaction:\n"
             f"💵 Volume: ${volume_usd}\n"
-            f"👾 Amount: {amount} MAX\n"
+            f"👾 Amount: {amount}\n"
             f"🔄 Type: {transaction_type}\n"
             f"👤 Wallet: {wallet}\n"
             f"🕒 Timestamp: {timestamp}\n"
@@ -197,11 +197,8 @@ def main() -> None:
     dispatcher.add_handler(CommandHandler("volume24h", volume24h))
     dispatcher.add_handler(CommandHandler("change24h", change24h))
     dispatcher.add_handler(CommandHandler("help", help_command))
-    dispatcher.add_handler(CommandHandler("whales", whales))
-    dispatcher.add_handler(CommandHandler("chart", chart))
 
     updater.start_polling()
-
     updater.idle()
 
 if __name__ == '__main__':
