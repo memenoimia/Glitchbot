@@ -127,21 +127,29 @@ def transactions(update: Update, context: CallbackContext) -> None:
 
         latest_trade = latest_trades[0]  # Get the first trade
 
+        block_number = latest_trade.get('blockNumber', 'N/A')
+        block_timestamp = latest_trade.get('blockTimestamp', 'N/A')
+        pair_id = latest_trade.get('pairId', 'N/A')
+        amount0 = latest_trade.get('amount0', 'N/A')
+        amount1 = latest_trade.get('amount1', 'N/A')
+        price_usd = latest_trade.get('priceUsd', 'N/A')
         volume_usd = latest_trade.get('volumeUsd', 'N/A')
-        amount = latest_trade.get('amount', 'N/A')
-        transaction_type = latest_trade.get('type', 'N/A')
-        wallet = latest_trade.get('wallet', 'N/A')
-        timestamp = latest_trade.get('timestamp', 'N/A')
-        transaction_id = latest_trade.get('id', 'N/A')
+        txn_type = latest_trade.get('type', 'N/A')
+        maker = latest_trade.get('maker', 'N/A')
+        txn_id = latest_trade.get('txnId', 'N/A')
 
         message = (
             f"Latest Transaction:\n"
-            f"💵 Volume: ${volume_usd}\n"
-            f"👾 Amount: {amount}\n"
-            f"🔄 Type: {transaction_type}\n"
-            f"👤 Wallet: {wallet}\n"
-            f"🕒 Timestamp: {timestamp}\n"
-            f"🔗 Transaction ID: {transaction_id}\n"
+            f"🕒 Block Number: {block_number}\n"
+            f"📅 Timestamp: {block_timestamp}\n"
+            f"🔄 Pair ID: {pair_id}\n"
+            f"💵 Amount0: {amount0}\n"
+            f"💵 Amount1: {amount1}\n"
+            f"💲 Price (USD): {price_usd}\n"
+            f"📈 Volume (USD): {volume_usd}\n"
+            f"🔄 Type: {txn_type}\n"
+            f"👤 Maker: {maker}\n"
+            f"🔗 Transaction ID: {txn_id}\n"
         )
 
         update.message.reply_text(message)
@@ -197,6 +205,8 @@ def main() -> None:
     dispatcher.add_handler(CommandHandler("volume24h", volume24h))
     dispatcher.add_handler(CommandHandler("change24h", change24h))
     dispatcher.add_handler(CommandHandler("help", help_command))
+    dispatcher.add_handler(CommandHandler("whales", whales))
+    dispatcher.add_handler(CommandHandler("chart", chart))
 
     updater.start_polling()
     updater.idle()
