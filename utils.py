@@ -2,7 +2,7 @@ import requests
 import logging
 from config import NEWS_TOKEN
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levellevel)%s', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 def get_latest_news():
