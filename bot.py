@@ -57,7 +57,6 @@ def headroom(update: Update, context: CallbackContext) -> None:
         change_1h = float(shared_data['change_1h'])
         change_5m = float(shared_data['change_5m'])
         total_supply = shared_data['total_supply']
-        liquidity = float(shared_data['liquidity'])
         current_price = float(shared_data['current_price'])
         banner_url = shared_data['token_banner']
         token_url = shared_data['token_url']
@@ -66,13 +65,13 @@ def headroom(update: Update, context: CallbackContext) -> None:
         context.bot.send_photo(chat_id=update.effective_chat.id, photo=banner_url)
 
         message = (
-            f"\uD83C\uDF10 Token: {token_name} ({token_symbol})\n"
-            f"{Config.TOKEN_ADDRESS}\n"
+            f"👾 Token: {token_name} ({token_symbol})\n"
             f"\uD83D\uDCB8 Market Cap: ${market_cap:,.0f}\n"
-            f"\uD83D\uDD04 Volume 24h: ${volume_24h:,.0f} 6h: ${volume_6h:,.0f} 1h: ${volume_1h:,.0f} 5m: ${volume_5m:,.0f}\n"
+            f"👝 Volume 24h: ${volume_24h:,.0f} 6h: ${volume_6h:,.0f} 1h: ${volume_1h:,.0f} 5m: ${volume_5m:,.0f}\n"
             f"\uD83D\uDCC8 Change 24h: {change_24h:.2f}% 6h: {change_6h:.2f}% 1h: {change_1h:.2f}% 5m: {change_5m:.2f}%\n"
-            f"\uD83C\uDFE6 Total Supply: {total_supply} \uD83D\uDCA7 Liquidity: ${liquidity:,.0f}\n"
+            f"\uD83C\uDFE6 Total Supply: {total_supply} 💰Price: {current_price:.6f}\n"
             f"\uD83C\uDF19 <a href='{token_url}'>Moonshot</a> \uD83C\uDF10 <a href='{website_url}'>Website</a>"
+            f"<a href='https://solanabeach.io/address/{Config.TOKEN_ADDRESS}'>{Config.TOKEN_ADDRESS}</a>\n"           
         )
 
         update.message.reply_text(message, parse_mode=ParseMode.HTML)
@@ -133,7 +132,6 @@ def transactions(update: Update, context: CallbackContext) -> None:
         txn_type = latest_trade.get('type', 'N/A')
         maker = latest_trade.get('maker', 'N/A')
         txn_id = latest_trade.get('txnId', 'N/A')
-        
         token_url = shared_data.get('token_url', '')
         website_url = shared_data.get('website_url', '')
         token_symbol = shared_data.get('token_symbol', 'N/A')
@@ -141,7 +139,7 @@ def transactions(update: Update, context: CallbackContext) -> None:
         maker_short = maker[:4] + "..." + maker[-4:]
 
         message = (
-            f"🗣 HEADROOM BUY!\n"
+            f"👾 HEADROOM BUY!\n"
             f"💵 Spent: ${price_usd}\n"
             f"👤 Wallet: <a href='https://solanabeach.io/address/{maker}'>{maker_short}</a>\n"
             f"💰 Purchased: {amount0} {token_symbol}\n"
