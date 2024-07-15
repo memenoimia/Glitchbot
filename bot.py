@@ -1,4 +1,5 @@
 import logging
+import requests
 from news import get_latest_news
 from telegram import Update, ParseMode, Bot
 from telegram.ext import Updater, CommandHandler, CallbackContext
@@ -9,7 +10,7 @@ bot = Bot(token=Config.TELEGRAM_TOKEN)
 
 # Enable logging
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG
+    format='%(asctime)s - %(name)s - %(levellevel)s - %(message)s', level=logging.DEBUG
 )
 logger = logging.getLogger(__name__)
 
@@ -65,13 +66,13 @@ def headroom(update: Update, context: CallbackContext) -> None:
         context.bot.send_photo(chat_id=update.effective_chat.id, photo=banner_url)
 
         message = (
-            f"👾 Token: {token_name} ({token_symbol})\n"
+            f"\uD83D\uDC7E Token: {token_name} ({token_symbol})\n"
             f"\uD83D\uDCB8 Market Cap: ${market_cap:,.0f}\n"
-            f"👝 Volume 24h: ${volume_24h:,.0f} 6h: ${volume_6h:,.0f} 1h: ${volume_1h:,.0f} 5m: ${volume_5m:,.0f}\n"
+            f"\uD83D\uDC5D Volume 24h: ${volume_24h:,.0f} 6h: ${volume_6h:,.0f} 1h: ${volume_1h:,.0f} 5m: ${volume_5m:,.0f}\n"
             f"\uD83D\uDCC8 Change 24h: {change_24h:.2f}% 6h: {change_6h:.2f}% 1h: {change_1h:.2f}% 5m: {change_5m:.2f}%\n"
-            f"\uD83C\uDFE6 Total Supply: {total_supply} 💰Price: {current_price:.6f}\n"
-            f"\uD83C\uDF19 <a href='{token_url}'>Moonshot</a> \uD83C\uDF10 <a href='{website_url}'>Website</a>"
-            f"<a href='https://solanabeach.io/address/{Config.TOKEN_ADDRESS}'>{Config.TOKEN_ADDRESS}</a>\n"           
+            f"\uD83C\uDFE6 Total Supply: {total_supply} \uD83D\uDCB0Price: {current_price:.6f}\n"
+            f"\uD83C\uDF19 <a href='{token_url}'>Moonshot</a> \uD83C\uDF10 <a href='{website_url}'>Website</a>\n"
+            f"<a href='https://solanabeach.io/address/{Config.TOKEN_ADDRESS}'>{Config.TOKEN_ADDRESS}</a>\n"
         )
 
         update.message.reply_text(message, parse_mode=ParseMode.HTML)
@@ -98,76 +99,102 @@ def news(update: Update, context: CallbackContext) -> None:
 
 def price(update: Update, context: CallbackContext) -> None:
     try:
-        current_price = float(shared_data.get('current_price', 0.0))
-        message = f"\uD83D\uDCB2 Current Price: ${current_price:.4f}"
+        response = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd")
+        response.raise_for_status()
+        solana_price = response.json().get("solana", {}).get("usd", 0.0)
+        
+        message = f"\uD83D\uDCB2 Current Solana Price: ${solana_price:.4f}"
         update.message.reply_text(message)
     except Exception as e:
         logger.error(f"Error in price command: {e}")
-        update.message.reply_text("An error occurred while fetching the current price.")
+        update.message.reply_text("An error occurred while fetching the Solana price.")
 
 def subscribe(update: Update, context: CallbackContext) -> None:
     update.message.reply_text("Subscription feature coming soon!")
 
 def transactions(update: Update, context: CallbackContext) -> None:
     try:
-        latest_trades_response = get_latest_trades_for_token()
-        
-        if isinstance(latest_trades_response, dict):
-            latest_trades = latest_trades_response.get('data', [])
-        else:
-            latest_trades = latest_trades_response
+        fetch_and_store_token_data()
+        latest_trades = get_latest_trades_for_token()
 
         if not latest_trades:
             update.message.reply_text("No recent transactions found.")
             return
 
-        # Filter out only 'buy' transactions
+        # Filter out only 'buy' transactions and sort by blockTimestamp
         buy_trades = [trade for trade in latest_trades if trade.get('type') == 'buy']
-
         if not buy_trades:
             update.message.reply_text("No recent buy transactions found.")
             return
 
-        latest_trade = buy_trades[0]
+        latest_trade = max(buy_trades, key=lambda trade: trade.get('blockTimestamp', 0))
+
+        dex_id = latest_trade.get('dexId', 'N/A')
         block_number = latest_trade.get('blockNumber', 'N/A')
         block_timestamp = latest_trade.get('blockTimestamp', 'N/A')
         pair_id = latest_trade.get('pairId', 'N/A')
-        amount0 = int(float(latest_trade.get('amount0', 'N/A')))
+        asset0_id = latest_trade.get('asset0Id', 'N/A')
+        asset1_id = latest_trade.get('asset1Id', 'N/A')
+        txn_id = latest_trade.get('txnId', 'N/A')
+        maker = latest_trade.get('maker', 'N/A')
+        txn_type = latest_trade.get('type', 'N/A')
+        amount0 = int(float(latest_trade.get('amount0', 0)))  # Convert amount0 to integer
         amount1 = latest_trade.get('amount1', 'N/A')
+        price_native = latest_trade.get('priceNative', 'N/A')
         price_usd = latest_trade.get('priceUsd', 'N/A')
         volume_usd = latest_trade.get('volumeUsd', 'N/A')
-        txn_type = latest_trade.get('type', 'N/A')
-        maker = latest_trade.get('maker', 'N/A')
-        txn_id = latest_trade.get('txnId', 'N/A')
+        metadata = latest_trade.get('metadata', {})
+        progress = metadata.get('progress', 'N/A')
+        curve_position = latest_trade.get('curvePosition', 'N/A')
+
+        token_name = shared_data.get('token_name', 'N/A')
         token_url = shared_data.get('token_url', '')
         website_url = shared_data.get('website_url', '')
-        token_symbol = shared_data.get('token_symbol', 'N/A')
-
-        maker_short = maker[:4] + "..." + maker[-4:]
 
         message = (
             f"👾 HEADROOM BUY!\n"
-            f"💵 Spent: ${volume_usd}\n"
-            f"👤 Wallet: <a href='https://solanabeach.io/address/{maker}'>{maker_short}</a>\n"
-            f"💰 Purchased: {amount0} {token_symbol}\n"
-            f"🌙 <a href='{token_url}'>Moonshot</a> 🌐 <a href='{website_url}'>Website</a>\n\n"
-            f"Latest Transaction Details:\n"
-            f"🕒 Block Number: {block_number}\n"
-            f"📅 Timestamp: {block_timestamp}\n"
-            f"🔄 Pair ID: {pair_id}\n"
-            f"💰 Amount0: {amount0}\n"
-            f"💰 Amount1: {amount1}\n"
-            f"💵 Price (USD): {price_usd}\n"
-            f"📈 Volume (USD): {volume_usd}\n"
-            f"🔄 Type: {txn_type}\n"
-            f"👤 Maker: {maker}\n"
-            f"🔗 Transaction ID: {txn_id}\n"
+            f"💵 Spent: ${volume_usd} 💰 Purchased: {amount0} {token_name}\n"
+            f"👤 Wallet: <a href='https://solanabeach.io/address/{maker}'>{maker[:4]}...{maker[-4:]}</a>\n"
+            f"🌙 <a href='{token_url}'>Moonshot</a> 🔥 Progress: {progress}% 🌐 <a href='{website_url}'>Website</a>\n"
+            f"<a href='https://solanabeach.io/address/{pair_id}'>{pair_id}</a>\n"
+#             f"Latest Transaction Details:\n"
+#             f"🕒 Block Number: {block_number}\n"
+#             f"📅 Timestamp: {block_timestamp}\n"
+#             f"💰 Amount0: {amount0}\n"
+#             f"💰 Amount1: {amount1}\n"
+#             f"💵 Price (USD): {price_usd}\n"
+#             f"📈 Volume (USD): {volume_usd}\n"
+#             f"🔄 Type: {txn_type}\n"
+#             f"👤 Maker: {maker}\n"
+#             f"🔗 Transaction ID: {txn_id}\n"
+#             f"dexId: {dex_id}\n"
+#             f"blockNumber: {block_number}\n"
+#             f"blockTimestamp: {block_timestamp}\n"
+#             f"pairId: {pair_id}\n"
+#             f"asset0Id: {asset0_id}\n"
+#             f"asset1Id: {asset1_id}\n"
+#             f"txnId: {txn_id}\n"
+#             f"maker: {maker}\n"
+#             f"type: {txn_type}\n"
+#             f"amount0: {amount0}\n"
+#             f"amount1: {amount1}\n"
+#             f"priceNative: {price_native}\n"
+#             f"priceUsd: {price_usd}\n"
+#             f"volumeUsd: {volume_usd}\n"
+#             f"metadata: {metadata}\n"
+#            f"progress: {progress}\n"
+#             f"curvePosition: {curve_position}\n"
         )
-
         update.message.reply_text(message, parse_mode=ParseMode.HTML)
+        context.bot.send_video(
+            chat_id=update.effective_chat.id,
+            video='https://cdn.glitch.global/ffa82557-90ab-436a-9585-9e6791f55285/582b8583-2440-4c96-aa3e-6de061b74b86.mp4?v=1721053375683'
+        )
     except Exception as e:
         logger.error(f"Error in transactions command: {e}")
         update.message.reply_text("An error occurred while fetching transactions information.")
+
+
 
 def marketcap(update: Update, context: CallbackContext) -> None:
     try:
@@ -208,7 +235,6 @@ def chart(update: Update, context: CallbackContext) -> None:
 
 def main() -> None:
     updater = Updater(Config.TELEGRAM_TOKEN, use_context=True)
-
     dispatcher = updater.dispatcher
 
     dispatcher.add_handler(CommandHandler("start", start))

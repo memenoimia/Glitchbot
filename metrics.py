@@ -5,6 +5,7 @@ from config import Config
 shared_data = {}
 
 TOKEN_URL = f"{Config.BASE_URL}/token/v1/{Config.CHAIN_ID}/{Config.TOKEN_ADDRESS}"
+TRADES_URL = f"{Config.BASE_URL}/trades/v1/latest/{Config.CHAIN_ID}/{Config.TOKEN_ADDRESS}"
 
 def fetch_and_store_token_data():
     response = requests.get(TOKEN_URL)
@@ -29,8 +30,13 @@ def fetch_and_store_token_data():
     shared_data['token_url'] = data.get('url', '')
     shared_data['website_url'] = data.get('profile', {}).get('links', [''])[0]
 
-def get_latest_trades_for_token():
-    url = f"{Config.BASE_URL}/trades/v1/latest/{Config.CHAIN_ID}/{Config.TOKEN_ADDRESS}"
-    response = requests.get(url)
+def fetch_and_store_latest_trades():
+    response = requests.get(TRADES_URL)
     response.raise_for_status()
-    return response.json()
+    data = response.json()
+    
+    shared_data['latest_trades'] = data
+
+def get_latest_trades_for_token():
+    fetch_and_store_latest_trades()
+    return shared_data.get('latest_trades', [])
