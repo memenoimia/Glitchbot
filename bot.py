@@ -1,28 +1,8 @@
-import json
 import logging
 from news import get_latest_news
 from telegram import Update, ParseMode, Bot
 from telegram.ext import Updater, CommandHandler, CallbackContext
-from metrics import (
-    get_token_name,
-    get_token_symbol,
-    get_market_cap,
-    get_24h_volume,
-    get_6h_volume,
-    get_1h_volume,
-    get_5m_volume,
-    get_24h_change,
-    get_6h_change,
-    get_1h_change,
-    get_5m_change, 
-    get_total_supply,
-    get_liquidity,
-    get_token_data,
-    get_token_banner,
-    get_token_url,
-    get_current_price,
-    get_latest_trades_for_token,
-)
+from metrics import shared_data, fetch_and_store_token_data, get_latest_trades_for_token
 from config import Config
 
 bot = Bot(token=Config.TELEGRAM_TOKEN)
@@ -63,25 +43,25 @@ def help_command(update: Update, context: CallbackContext) -> None:
 
 def headroom(update: Update, context: CallbackContext) -> None:
     try:
-        token_data = get_token_data()
-        token_name = get_token_name()
-        token_symbol = get_token_symbol()
-        market_cap = float(get_market_cap())
-        volume_24h = float(get_24h_volume())
-        volume_6h = float(get_6h_volume())
-        volume_1h = float(get_1h_volume())
-        volume_5m = float(get_5m_volume())
-        change_24h = float(get_24h_change())
-        change_6h = float(get_6h_change())
-        change_1h = float(get_1h_change())
-        change_5m = float(get_5m_change())
-        total_supply = get_total_supply()
-        liquidity = float(get_liquidity())
-        current_price = float(get_current_price())
-        banner_url = get_token_banner()
-        token_url = get_token_url()
-
-        website_url = token_data.get('profile', {}).get('links', [''])[0]
+        fetch_and_store_token_data()
+        token_data = shared_data['token_data']
+        token_name = shared_data['token_name']
+        token_symbol = shared_data['token_symbol']
+        market_cap = float(shared_data['market_cap'])
+        volume_24h = float(shared_data['volume_24h'])
+        volume_6h = float(shared_data['volume_6h'])
+        volume_1h = float(shared_data['volume_1h'])
+        volume_5m = float(shared_data['volume_5m'])
+        change_24h = float(shared_data['change_24h'])
+        change_6h = float(shared_data['change_6h'])
+        change_1h = float(shared_data['change_1h'])
+        change_5m = float(shared_data['change_5m'])
+        total_supply = shared_data['total_supply']
+        liquidity = float(shared_data['liquidity'])
+        current_price = float(shared_data['current_price'])
+        banner_url = shared_data['token_banner']
+        token_url = shared_data['token_url']
+        website_url = shared_data['website_url']
 
         context.bot.send_photo(chat_id=update.effective_chat.id, photo=banner_url)
 
@@ -119,7 +99,7 @@ def news(update: Update, context: CallbackContext) -> None:
 
 def price(update: Update, context: CallbackContext) -> None:
     try:
-        current_price = get_current_price()
+        current_price = float(shared_data.get('current_price', 0.0))
         message = f"\uD83D\uDCB2 Current Price: ${current_price:.4f}"
         update.message.reply_text(message)
     except Exception as e:
@@ -146,16 +126,27 @@ def transactions(update: Update, context: CallbackContext) -> None:
         block_number = latest_trade.get('blockNumber', 'N/A')
         block_timestamp = latest_trade.get('blockTimestamp', 'N/A')
         pair_id = latest_trade.get('pairId', 'N/A')
-        amount0 = latest_trade.get('amount0', 'N/A')
+        amount0 = int(float(latest_trade.get('amount0', 'N/A')))
         amount1 = latest_trade.get('amount1', 'N/A')
         price_usd = latest_trade.get('priceUsd', 'N/A')
         volume_usd = latest_trade.get('volumeUsd', 'N/A')
         txn_type = latest_trade.get('type', 'N/A')
         maker = latest_trade.get('maker', 'N/A')
         txn_id = latest_trade.get('txnId', 'N/A')
+        
+        token_url = shared_data.get('token_url', '')
+        website_url = shared_data.get('website_url', '')
+        token_symbol = shared_data.get('token_symbol', 'N/A')
+
+        maker_short = maker[:4] + "..." + maker[-4:]
 
         message = (
-            f"Latest Transaction:\n"
+            f"🗣 HEADROOM BUY!\n"
+            f"💵 Spent: ${price_usd}\n"
+            f"👤 Wallet: <a href='https://solanabeach.io/address/{maker}'>{maker_short}</a>\n"
+            f"💰 Purchased: {amount0} {token_symbol}\n"
+            f"🌙 <a href='{token_url}'>Moonshot</a> 🌐 <a href='{website_url}'>Website</a>\n\n"
+            f"Latest Transaction Details:\n"
             f"🕒 Block Number: {block_number}\n"
             f"📅 Timestamp: {block_timestamp}\n"
             f"🔄 Pair ID: {pair_id}\n"
@@ -168,14 +159,14 @@ def transactions(update: Update, context: CallbackContext) -> None:
             f"🔗 Transaction ID: {txn_id}\n"
         )
 
-        update.message.reply_text(message)
+        update.message.reply_text(message, parse_mode=ParseMode.HTML)
     except Exception as e:
         logger.error(f"Error in transactions command: {e}")
         update.message.reply_text("An error occurred while fetching transactions information.")
 
 def marketcap(update: Update, context: CallbackContext) -> None:
     try:
-        market_cap = get_market_cap()
+        market_cap = float(shared_data.get('market_cap', 0.0))
         message = f"\uD83D\uDCB8 Market Cap: ${market_cap:,.0f}"
         update.message.reply_text(message)
     except Exception as e:
@@ -184,7 +175,7 @@ def marketcap(update: Update, context: CallbackContext) -> None:
 
 def volume24h(update: Update, context: CallbackContext) -> None:
     try:
-        volume_24h = get_24h_volume()
+        volume_24h = float(shared_data.get('volume_24h', 0.0))
         message = f"\uD83D\uDD04 Volume 24h: ${volume_24h:,.0f}"
         update.message.reply_text(message)
     except Exception as e:
@@ -193,7 +184,7 @@ def volume24h(update: Update, context: CallbackContext) -> None:
 
 def change24h(update: Update, context: CallbackContext) -> None:
     try:
-        change_24h = get_24h_change()
+        change_24h = float(shared_data.get('change_24h', 0.0))
         message = f"\uD83D\uDCC8 Change 24h: {change_24h:.2f}%"
         update.message.reply_text(message)
     except Exception as e:
