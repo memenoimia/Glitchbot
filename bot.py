@@ -10,7 +10,7 @@ bot = Bot(token=Config.TELEGRAM_TOKEN)
 
 # Enable logging
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levellevel)s - %(message)s', level=logging.DEBUG
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG
 )
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ def headroom(update: Update, context: CallbackContext) -> None:
         message = (
             f"\uD83D\uDC7E Token: {token_name} ({token_symbol})\n"
             f"\uD83D\uDCB8 Market Cap: ${market_cap:,.0f}\n"
-            f"\uD83D\uDC5D Volume 24h: ${volume_24h:,.0f} 6h: ${volume_6h:,.0f} 1h: ${volume_1h:,.0f} 5m: ${volume_5m:,.0f}\n"
+            f"\uD83D\uDC5D Volume 24h: ${volume_24h:,.0f} 6h: ${volume_6h:,.0f} 1h: ${volume_1h:,.0f} 5m: {volume_5m:,.0f}\n"
             f"\uD83D\uDCC8 Change 24h: {change_24h:.2f}% 6h: {change_6h:.2f}% 1h: {change_1h:.2f}% 5m: {change_5m:.2f}%\n"
             f"\uD83C\uDFE6 Total Supply: {total_supply} \uD83D\uDCB0Price: {current_price:.6f}\n"
             f"\uD83C\uDF19 <a href='{token_url}'>Moonshot</a> \uD83C\uDF10 <a href='{website_url}'>Website</a>\n"
@@ -151,50 +151,23 @@ def transactions(update: Update, context: CallbackContext) -> None:
         token_url = shared_data.get('token_url', '')
         website_url = shared_data.get('website_url', '')
 
-        message = (
-            f"👾 HEADROOM BUY!\n"
-            f"💵 Spent: ${volume_usd} 💰 Purchased: {amount0} {token_name}\n"
-            f"👤 Wallet: <a href='https://solanabeach.io/address/{maker}'>{maker[:4]}...{maker[-4:]}</a>\n"
-            f"🌙 <a href='{token_url}'>Moonshot</a> 🔥 Progress: {progress}% 🌐 <a href='{website_url}'>Website</a>\n"
-            f"<a href='https://solanabeach.io/address/{pair_id}'>{pair_id}</a>\n"
-#             f"Latest Transaction Details:\n"
-#             f"🕒 Block Number: {block_number}\n"
-#             f"📅 Timestamp: {block_timestamp}\n"
-#             f"💰 Amount0: {amount0}\n"
-#             f"💰 Amount1: {amount1}\n"
-#             f"💵 Price (USD): {price_usd}\n"
-#             f"📈 Volume (USD): {volume_usd}\n"
-#             f"🔄 Type: {txn_type}\n"
-#             f"👤 Maker: {maker}\n"
-#             f"🔗 Transaction ID: {txn_id}\n"
-#             f"dexId: {dex_id}\n"
-#             f"blockNumber: {block_number}\n"
-#             f"blockTimestamp: {block_timestamp}\n"
-#             f"pairId: {pair_id}\n"
-#             f"asset0Id: {asset0_id}\n"
-#             f"asset1Id: {asset1_id}\n"
-#             f"txnId: {txn_id}\n"
-#             f"maker: {maker}\n"
-#             f"type: {txn_type}\n"
-#             f"amount0: {amount0}\n"
-#             f"amount1: {amount1}\n"
-#             f"priceNative: {price_native}\n"
-#             f"priceUsd: {price_usd}\n"
-#             f"volumeUsd: {volume_usd}\n"
-#             f"metadata: {metadata}\n"
-#            f"progress: {progress}\n"
-#             f"curvePosition: {curve_position}\n"
-        )
-        update.message.reply_text(message, parse_mode=ParseMode.HTML)
         context.bot.send_video(
             chat_id=update.effective_chat.id,
             video='https://cdn.glitch.global/ffa82557-90ab-436a-9585-9e6791f55285/582b8583-2440-4c96-aa3e-6de061b74b86.mp4?v=1721053375683'
         )
+        
+        message = (
+            f"👾👾👾 HEADROOM BUY! 👾👾👾\n"
+            f"💵 Spent: ${volume_usd} 💰 Purchased: {amount0} {token_name}\n"
+            f"👤 Wallet: <a href='https://solanabeach.io/address/{maker}'>{maker[:4]}...{maker[-4:]}</a>\n"
+            f"🌙 <a href='{token_url}'>Moonshot</a> 🔥 Progress: {progress}% 🌐 <a href='{website_url}'>Website</a>\n"
+            f"<a href='https://solanabeach.io/address/{pair_id}'>{pair_id}</a>\n"
+        )
+
+        update.message.reply_text(message, parse_mode=ParseMode.HTML)
     except Exception as e:
         logger.error(f"Error in transactions command: {e}")
         update.message.reply_text("An error occurred while fetching transactions information.")
-
-
 
 def marketcap(update: Update, context: CallbackContext) -> None:
     try:
