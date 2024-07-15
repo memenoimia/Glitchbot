@@ -121,7 +121,14 @@ def transactions(update: Update, context: CallbackContext) -> None:
             update.message.reply_text("No recent transactions found.")
             return
 
-        latest_trade = latest_trades[0]
+        # Filter out only 'buy' transactions
+        buy_trades = [trade for trade in latest_trades if trade.get('type') == 'buy']
+
+        if not buy_trades:
+            update.message.reply_text("No recent buy transactions found.")
+            return
+
+        latest_trade = buy_trades[0]
         block_number = latest_trade.get('blockNumber', 'N/A')
         block_timestamp = latest_trade.get('blockTimestamp', 'N/A')
         pair_id = latest_trade.get('pairId', 'N/A')
@@ -140,7 +147,7 @@ def transactions(update: Update, context: CallbackContext) -> None:
 
         message = (
             f"👾 HEADROOM BUY!\n"
-            f"💵 Spent: ${price_usd}\n"
+            f"💵 Spent: ${volume_usd}\n"
             f"👤 Wallet: <a href='https://solanabeach.io/address/{maker}'>{maker_short}</a>\n"
             f"💰 Purchased: {amount0} {token_symbol}\n"
             f"🌙 <a href='{token_url}'>Moonshot</a> 🌐 <a href='{website_url}'>Website</a>\n\n"
@@ -150,8 +157,8 @@ def transactions(update: Update, context: CallbackContext) -> None:
             f"🔄 Pair ID: {pair_id}\n"
             f"💰 Amount0: {amount0}\n"
             f"💰 Amount1: {amount1}\n"
-            f"💲 Price (USD): {price_usd}\n"
-            f"📊 Volume (USD): {volume_usd}\n"
+            f"💵 Price (USD): {price_usd}\n"
+            f"📈 Volume (USD): {volume_usd}\n"
             f"🔄 Type: {txn_type}\n"
             f"👤 Maker: {maker}\n"
             f"🔗 Transaction ID: {txn_id}\n"
