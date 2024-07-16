@@ -1,19 +1,24 @@
 import logging
 import requests
+import threading
+import time
+import telegram
 from news import get_latest_news
 from telegram import Update, ParseMode, Bot
 from telegram.ext import Updater, CommandHandler, CallbackContext
-from metrics import shared_data, fetch_and_store_token_data, get_latest_trades_for_token
+from metrics import shared_data, fetch_and_store_token_data, fetch_and_store_latest_trades, get_latest_trades_for_token
 from config import Config
 
+# Initialize the bot with the Telegram token
 bot = Bot(token=Config.TELEGRAM_TOKEN)
 
-# Enable logging
+# Enable logging for the bot
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG
 )
 logger = logging.getLogger(__name__)
 
+# Function to send a message to the configured Telegram chat group
 def send_message_to_group(message):
     try:
         bot.send_message(chat_id=Config.TELEGRAM_CHAT_ID, text=message)
@@ -21,10 +26,12 @@ def send_message_to_group(message):
     except Exception as e:
         logger.error(f"Error sending message to group: {e}")
 
+# Command handler for /start
 def start(update: Update, context: CallbackContext) -> None:
     update.message.reply_text("Welcome to Glitchbot! Use /help to see available commands.")
     send_message_to_group("Bot has started and is ready to receive commands.")
 
+# Command handler for /help
 def help_command(update: Update, context: CallbackContext) -> None:
     help_text = (
         "/start - Digital howdy! Beep boop!\n"
@@ -42,6 +49,7 @@ def help_command(update: Update, context: CallbackContext) -> None:
     )
     update.message.reply_text(help_text)
 
+# Command handler for /headroom
 def headroom(update: Update, context: CallbackContext) -> None:
     try:
         fetch_and_store_token_data()
@@ -66,12 +74,12 @@ def headroom(update: Update, context: CallbackContext) -> None:
         context.bot.send_photo(chat_id=update.effective_chat.id, photo=banner_url)
 
         message = (
-            f"\uD83D\uDC7E Token: {token_name} ({token_symbol})\n"
-            f"\uD83D\uDCB8 Market Cap: ${market_cap:,.0f}\n"
-            f"\uD83D\uDC5D Volume 24h: ${volume_24h:,.0f} 6h: ${volume_6h:,.0f} 1h: ${volume_1h:,.0f} 5m: {volume_5m:,.0f}\n"
-            f"\uD83D\uDCC8 Change 24h: {change_24h:.2f}% 6h: {change_6h:.2f}% 1h: {change_1h:.2f}% 5m: {change_5m:.2f}%\n"
-            f"\uD83C\uDFE6 Total Supply: {total_supply} \uD83D\uDCB0Price: {current_price:.6f}\n"
-            f"\uD83C\uDF19 <a href='{token_url}'>Moonshot</a> \uD83C\uDF10 <a href='{website_url}'>Website</a>\n"
+            f"👾 Token: {token_name} ({token_symbol})\n"
+            f"💸 Market Cap: ${market_cap:,.0f}\n"
+            f"👟 Volume 24h: ${volume_24h:,.0f} 6h: ${volume_6h:,.0f} 1h: ${volume_1h:,.0f} 5m: {volume_5m:,.0f}\n"
+            f"📈 Change 24h: {change_24h:.2f}% 6h: {change_6h:.2f}% 1h: {change_1h:.2f}% 5m: {change_5m:.2f}%\n"
+            f"🏦 Total Supply: {total_supply} 💰Price: {current_price:.6f}\n"
+            f"🌙 <a href='{token_url}'>Moonshot</a> 🌐 <a href='{website_url}'>Website</a>\n"
             f"<a href='https://solanabeach.io/address/{Config.TOKEN_ADDRESS}'>{Config.TOKEN_ADDRESS}</a>\n"
         )
 
@@ -81,6 +89,7 @@ def headroom(update: Update, context: CallbackContext) -> None:
         logger.error(f"Error in headroom command: {e}")
         update.message.reply_text("An error occurred while fetching headroom information.")
 
+# Command handler for /news
 def news(update: Update, context: CallbackContext) -> None:
     try:
         news_items = get_latest_news()
@@ -90,28 +99,31 @@ def news(update: Update, context: CallbackContext) -> None:
             return
 
         news_message = "\n\n".join(
-            [f"\uD83D\uDCF0 <a href='{item['url']}'>{item['title']}</a>\n{item['description']}" for item in news_items[:3]]
+            [f"📰 <a href='{item['url']}'>{item['title']}</a>\n{item['description']}" for item in news_items[:3]]
         )
         update.message.reply_text(news_message, parse_mode=ParseMode.HTML)
     except Exception as e:
         logger.error(f"Error in news command: {e}")
         update.message.reply_text("An error occurred while fetching the latest news.")
 
+# Command handler for /price
 def price(update: Update, context: CallbackContext) -> None:
     try:
         response = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd")
         response.raise_for_status()
         solana_price = response.json().get("solana", {}).get("usd", 0.0)
         
-        message = f"\uD83D\uDCB2 Current Solana Price: ${solana_price:.4f}"
+        message = f"💲 Current Solana Price: ${solana_price:.4f}"
         update.message.reply_text(message)
     except Exception as e:
         logger.error(f"Error in price command: {e}")
         update.message.reply_text("An error occurred while fetching the Solana price.")
 
+# Command handler for /subscribe
 def subscribe(update: Update, context: CallbackContext) -> None:
     update.message.reply_text("Subscription feature coming soon!")
 
+# Command handler for /transactions
 def transactions(update: Update, context: CallbackContext) -> None:
     try:
         fetch_and_store_token_data()
@@ -169,36 +181,41 @@ def transactions(update: Update, context: CallbackContext) -> None:
         logger.error(f"Error in transactions command: {e}")
         update.message.reply_text("An error occurred while fetching transactions information.")
 
+# Command handler for /marketcap
 def marketcap(update: Update, context: CallbackContext) -> None:
     try:
         market_cap = float(shared_data.get('market_cap', 0.0))
-        message = f"\uD83D\uDCB8 Market Cap: ${market_cap:,.0f}"
+        message = f"💸 Market Cap: ${market_cap:,.0f}"
         update.message.reply_text(message)
     except Exception as e:
         logger.error(f"Error in marketcap command: {e}")
         update.message.reply_text("An error occurred while fetching the market cap.")
 
+# Command handler for /volume24h
 def volume24h(update: Update, context: CallbackContext) -> None:
     try:
         volume_24h = float(shared_data.get('volume_24h', 0.0))
-        message = f"\uD83D\uDD04 Volume 24h: ${volume_24h:,.0f}"
+        message = f"🔄 Volume 24h: ${volume_24h:,.0f}"
         update.message.reply_text(message)
     except Exception as e:
         logger.error(f"Error in volume24h command: {e}")
         update.message.reply_text("An error occurred while fetching the 24h volume.")
 
+# Command handler for /change24h
 def change24h(update: Update, context: CallbackContext) -> None:
     try:
         change_24h = float(shared_data.get('change_24h', 0.0))
-        message = f"\uD83D\uDCC8 Change 24h: {change_24h:.2f}%"
+        message = f"📈 Change 24h: {change_24h:.2f}%"
         update.message.reply_text(message)
     except Exception as e:
         logger.error(f"Error in change24h command: {e}")
         update.message.reply_text("An error occurred while fetching the 24h change.")
 
+# Command handler for /whales
 def whales(update: Update, context: CallbackContext) -> None:
     update.message.reply_text("Feature coming soon!")
 
+# Command handler for /chart
 def chart(update: Update, context: CallbackContext) -> None:
     token_symbol = ' '.join(context.args).upper()
     if not token_symbol:
@@ -206,6 +223,7 @@ def chart(update: Update, context: CallbackContext) -> None:
         return
     update.message.reply_text(f"Token price chart for {token_symbol}. Highs, lows, drama!")
 
+# Function to set up the bot and add command handlers
 def main() -> None:
     updater = Updater(Config.TELEGRAM_TOKEN, use_context=True)
     dispatcher = updater.dispatcher
@@ -227,4 +245,5 @@ def main() -> None:
     updater.idle()
 
 if __name__ == '__main__':
+    # Run the bot
     main()
