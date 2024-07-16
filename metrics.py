@@ -153,6 +153,12 @@ def notify_new_buy(trade):
     logging.debug(f"progress: {progress}")
     logging.debug(f"curve_position: {curve_position}")
 
+    # Send video
+    bot.send_video(
+        chat_id=Config.TELEGRAM_CHAT_ID,
+        video='https://cdn.glitch.global/ffa82557-90ab-436a-9585-9e6791f55285/582b8583-2440-4c96-aa3e-6de061b74b86.mp4?v=1721053375683'
+    )
+
     message = (
         f"👾👾👾 HEADROOM BUY! 👾👾👾\n"
         f"💵 Spent: ${volume_usd} 💰 Purchased: {amount0} {token_name}\n"
