@@ -38,11 +38,8 @@ def help_command(update: Update, context: CallbackContext) -> None:
         "/headroom - HEADROOM token info. Get the skinny!\n"
         "/news - Latest Solana buzz. Extra, extra!\n"
         "/price - Current SOL price. Cha-ching!\n"
-        "/subscribe - Future subscription awesomeness. Stay tuned!\n"
+        "/subscribe - Toggle notifications for new buys.\n"
         "/transactions - Latest transactions. Splash!\n"
-        "/marketcap - Market cap means big bucks?\n"
-        "/volume24h - 24-hour volume. Big leagues!\n"
-        "/change24h - 24-hour price change. Rollercoaster!\n"
         "/help - List of commands. Help is here!\n"
         "/whales - Large transactions. Whale watching!\n"
         "/chart [token_symbol] - Token price chart. Highs, lows, drama!\n"
@@ -83,7 +80,7 @@ def headroom(update: Update, context: CallbackContext) -> None:
             f"<a href='https://solanabeach.io/address/{Config.TOKEN_ADDRESS}'>{Config.TOKEN_ADDRESS}</a>\n"
         )
 
-        update.message.reply_text(message, parse_mode=ParseMode.HTML)
+        update.message.reply_text(message, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
         logger.info("Displayed HEADROOM token information.")
     except Exception as e:
         logger.error(f"Error in headroom command: {e}")
@@ -101,7 +98,7 @@ def news(update: Update, context: CallbackContext) -> None:
         news_message = "\n\n".join(
             [f"📰 <a href='{item['url']}'>{item['title']}</a>\n{item['description']}" for item in news_items[:3]]
         )
-        update.message.reply_text(news_message, parse_mode=ParseMode.HTML)
+        update.message.reply_text(news_message, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
     except Exception as e:
         logger.error(f"Error in news command: {e}")
         update.message.reply_text("An error occurred while fetching the latest news.")
@@ -120,8 +117,13 @@ def price(update: Update, context: CallbackContext) -> None:
         update.message.reply_text("An error occurred while fetching the Solana price.")
 
 # Command handler for /subscribe
+notifications_enabled = True
+
 def subscribe(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text("Subscription feature coming soon!")
+    global notifications_enabled
+    notifications_enabled = not notifications_enabled
+    status = "enabled" if notifications_enabled else "disabled"
+    update.message.reply_text(f"Notifications have been {status}.")
 
 # Command handler for /transactions
 def transactions(update: Update, context: CallbackContext) -> None:
@@ -173,43 +175,13 @@ def transactions(update: Update, context: CallbackContext) -> None:
             f"💵 Spent: ${volume_usd} 💰 Purchased: {amount0} {token_name}\n"
             f"👤 Wallet: <a href='https://solanabeach.io/address/{maker}'>{maker[:4]}...{maker[-4:]}</a>\n"
             f"🌙 <a href='{token_url}'>Moonshot</a> 🔥 Progress: {progress}% 🌐 <a href='{website_url}'>Website</a>\n"
-            f"<a href='https://solanabeach.io/address/{pair_id}'>{pair_id}</a>\n"
+            f" <a href='{token_url}'>{pair_id}</a>\n"
         )
 
-        update.message.reply_text(message, parse_mode=ParseMode.HTML)
+        update.message.reply_text(message, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
     except Exception as e:
         logger.error(f"Error in transactions command: {e}")
         update.message.reply_text("An error occurred while fetching transactions information.")
-
-# Command handler for /marketcap
-def marketcap(update: Update, context: CallbackContext) -> None:
-    try:
-        market_cap = float(shared_data.get('market_cap', 0.0))
-        message = f"💸 Market Cap: ${market_cap:,.0f}"
-        update.message.reply_text(message)
-    except Exception as e:
-        logger.error(f"Error in marketcap command: {e}")
-        update.message.reply_text("An error occurred while fetching the market cap.")
-
-# Command handler for /volume24h
-def volume24h(update: Update, context: CallbackContext) -> None:
-    try:
-        volume_24h = float(shared_data.get('volume_24h', 0.0))
-        message = f"🔄 Volume 24h: ${volume_24h:,.0f}"
-        update.message.reply_text(message)
-    except Exception as e:
-        logger.error(f"Error in volume24h command: {e}")
-        update.message.reply_text("An error occurred while fetching the 24h volume.")
-
-# Command handler for /change24h
-def change24h(update: Update, context: CallbackContext) -> None:
-    try:
-        change_24h = float(shared_data.get('change_24h', 0.0))
-        message = f"📈 Change 24h: {change_24h:.2f}%"
-        update.message.reply_text(message)
-    except Exception as e:
-        logger.error(f"Error in change24h command: {e}")
-        update.message.reply_text("An error occurred while fetching the 24h change.")
 
 # Command handler for /whales
 def whales(update: Update, context: CallbackContext) -> None:
@@ -234,9 +206,6 @@ def main() -> None:
     dispatcher.add_handler(CommandHandler("price", price))
     dispatcher.add_handler(CommandHandler("subscribe", subscribe))
     dispatcher.add_handler(CommandHandler("transactions", transactions))
-    dispatcher.add_handler(CommandHandler("marketcap", marketcap))
-    dispatcher.add_handler(CommandHandler("volume24h", volume24h))
-    dispatcher.add_handler(CommandHandler("change24h", change24h))
     dispatcher.add_handler(CommandHandler("help", help_command))
     dispatcher.add_handler(CommandHandler("whales", whales))
     dispatcher.add_handler(CommandHandler("chart", chart, pass_args=True))

@@ -83,16 +83,15 @@ def check_new_buy_transaction():
             fetch_and_store_latest_trades()
             
             latest_trades = shared_data.get('latest_trades', [])
-            for trade in latest_trades:
-                logger.debug(f"Processing trade: {trade}")
-                if 'blockTimestamp' not in trade:
-                    logger.warning(f"Trade missing 'blockTimestamp' key: {trade}")
-                    continue
-                if trade['type'] == 'buy' and (last_transaction_timestamp is None or trade['blockTimestamp'] > last_transaction_timestamp):
-                    logger.info(f"New buy transaction found: {trade}")
-                    notify_new_buy(trade)
-                    last_transaction_timestamp = trade['blockTimestamp']
-                    break
+            buy_trades = [trade for trade in latest_trades if trade.get('type') == 'buy']
+            if not buy_trades:
+                logger.info("No new buy transactions found.")
+                continue
+
+            latest_trade = max(buy_trades, key=lambda trade: trade.get('blockTimestamp', 0))
+            if last_transaction_timestamp is None or latest_trade['blockTimestamp'] > last_transaction_timestamp:
+                notify_new_buy(latest_trade)
+                last_transaction_timestamp = latest_trade['blockTimestamp']
         except Exception as e:
             logger.error(f"Error in check_new_buy_transaction: {e}")
         time.sleep(60)  # Check every 60 seconds
@@ -160,14 +159,15 @@ def notify_new_buy(trade):
     )
 
     message = (
-        f"👾👾👾 HEADROOM BUY! 👾👾👾\n"
-        f"💵 Spent: ${volume_usd} 💰 Purchased: {amount0} {token_name}\n"
-        f"👤 Wallet: <a href='https://solanabeach.io/address/{maker}'>{truncated_maker}</a>\n"
-        f"🌙 <a href='{token_url}'>{dex_id}</a> 🔥 Progress: {progress}% 🌐 <a href='{website_url}')>Website</a>"
+        f"\uD83D\uDC7E\uD83D\uDC7E\uD83D\uDC7E HEADROOM BUY! \uD83D\uDC7E\uD83D\uDC7E\uD83D\uDC7E\n"
+        f"\uD83D\uDCB5 Spent: ${volume_usd} \uD83D\uDCB0 Purchased: {amount0} {token_name}\n"
+        f"\uD83D\uDC64 Wallet: <a href='https://solanabeach.io/address/{maker}'>{truncated_maker}</a>\n"
+        f"\uD83C\uDF19 <a href='{token_url}'>{dex_id}</a> \uD83D\uDD25 Progress: {progress}% \uD83C\uDF10 <a href='{website_url}')>Website</a>"
+        f"<a href='{token_url}'>{Config.TOKEN_ADDRESS}</a>"
     )
 
     logging.info(f"Sending message: {message}")
-    bot.send_message(chat_id=Config.TELEGRAM_CHAT_ID, text=message, parse_mode=telegram.ParseMode.HTML)
+    bot.send_message(chat_id=Config.TELEGRAM_CHAT_ID, text=message, parse_mode=telegram.ParseMode.HTML, disable_web_page_preview=True)
 
 def main():
     trades = fetch_latest_trades()
