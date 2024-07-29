@@ -162,7 +162,7 @@ def notify_new_buy(trade):
         f"\uD83D\uDC7E\uD83D\uDC7E\uD83D\uDC7E HEADROOM BUY! \uD83D\uDC7E\uD83D\uDC7E\uD83D\uDC7E\n"
         f"\uD83D\uDCB5 Spent: ${volume_usd} \uD83D\uDCB0 Purchased: {amount0} {token_name}\n"
         f"\uD83D\uDC64 Wallet: <a href='https://solanabeach.io/address/{maker}'>{truncated_maker}</a>\n"
-        f"\uD83C\uDF19 <a href='{token_url}'>{dex_id}</a> \uD83D\uDD25 Progress: {progress}% \uD83C\uDF10 <a href='{website_url}')>Website</a>"
+        f"\uD83C\uDF19 <a href='{token_url}'>{dex_id}</a> \uD83D\uDD25 Progress: {progress}% \uD83C\uDF10 <a href='{website_url}')>Website</a>\n"
         f"<a href='{token_url}'>{Config.TOKEN_ADDRESS}</a>"
     )
 
